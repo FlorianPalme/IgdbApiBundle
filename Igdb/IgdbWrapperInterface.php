@@ -453,11 +453,12 @@ interface IgdbWrapperInterface
      * Send an HTTP Request.
      *
      * @param string $url
+     * @param string $body
      *
      * @return ResponseInterface
      * @throws GuzzleException
      */
-    public function sendRequest(string $url): ?ResponseInterface;
+    public function sendRequest(string $url, string $body): ?ResponseInterface;
 
     /**
      * Decode the response's body to a PHP Assoc Array.

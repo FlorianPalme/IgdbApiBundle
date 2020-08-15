@@ -88,8 +88,9 @@ class IgdbWrapper implements IgdbWrapperInterface
       ParameterBuilderInterface $paramBuilder
     ): array {
         $url = $this->getEndpoint($endpoint) . $paramBuilder->buildQueryString();
+        $body = $paramBuilder->buildBody();
 
-        return $this->processResponse($this->sendRequest($url));
+        return $this->processResponse($this->sendRequest($url, $body));
     }
 
     /**
@@ -391,14 +392,15 @@ class IgdbWrapper implements IgdbWrapperInterface
     /**
      * {@inheritdoc}
      */
-    public function sendRequest(string $url): ResponseInterface
+    public function sendRequest(string $url, string $body): ResponseInterface
     {
         try {
-            $response = $this->httpClient->request('GET', $url, [
+            $response = $this->httpClient->request('POST', $url, [
               'headers' => [
                 'user-key' => $this->apiKey,
                 'Accept' => 'application/json',
               ],
+              'body' => $body,
             ]);
         } catch (BadResponseException $e) {
             $response = $e->getResponse();

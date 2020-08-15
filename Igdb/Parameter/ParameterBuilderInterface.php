@@ -36,16 +36,22 @@ interface ParameterBuilderInterface
     /**
      * Set the filters parameter.
      *
+     * Use $postfix only for = != > >= < or <=
+     * If you want to use more complex filters, just fill the $value parameter
+     * according to the igdb docs
+     *
      * @link https://igdb.github.io/api/references/filters
      *
      * @param string $field
+     * @param $value
      * @param string $postfix
      *
      * @return ParameterBuilderInterface
      */
     public function setFilters(
       string $field,
-      string $postfix
+      $value,
+      string $postfix = '='
     ): ParameterBuilderInterface;
 
     /**
@@ -135,4 +141,11 @@ interface ParameterBuilderInterface
      * @return void
      */
     public function clear(): void;
+
+    /**
+     * Build the body part from the provided parameters
+     *
+     * @return string
+     */
+    public function buildBody(): string;
 }

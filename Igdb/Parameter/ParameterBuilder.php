@@ -31,7 +31,7 @@ class ParameterBuilder implements ParameterBuilderInterface
     /**
      * @var array
      */
-    private $ids;
+    private $ids = [];
 
     /**
      * @var int
@@ -81,9 +81,14 @@ class ParameterBuilder implements ParameterBuilderInterface
      */
     public function setFilters(
       string $field,
-      string $postfix
+      $value,
+      string $postfix = '='
     ): ParameterBuilderInterface {
-        $this->filters[$field] = $postfix;
+        $this->filters[] = [
+            'field' => $field,
+            'postfix' => $postfix,
+            'value' => $value,
+        ];
         return $this;
     }
 
@@ -155,32 +160,8 @@ class ParameterBuilder implements ParameterBuilderInterface
      */
     public function buildQueryString(): string
     {
-        $propsArr = get_object_vars($this);
-
-        foreach ($propsArr as $key => $prop) {
-            // faster than is_array smh
-            if ((array)$prop === $prop && $key !== 'filters') {
-                $propsArr[$key] = implode(',', $prop);
-            }
-        }
-
-        $ids = $propsArr['ids'];
-        unset($propsArr['ids']);
-
-        empty($propsArr['fields']) ? $propsArr['fields'] = '*' : null;
-
-        $filters = '';
-
-        if (isset($propsArr['filters'])) {
-            foreach ($propsArr['filters'] as $field => $postfix) {
-                $filters .= "&filter{$field}={$postfix}";
-            }
-
-            unset($propsArr['filters']);
-        }
-
-        // using urldecode because http_build_query encodes commas :|
-        return $ids . '?' . urldecode(http_build_query($propsArr)) . $filters;
+        // since the new api is in use, we dont need any get parameters
+        return '';
     }
 
     /**
@@ -193,5 +174,59 @@ class ParameterBuilder implements ParameterBuilderInterface
         foreach ($props as $key => $prop) {
             $this->$key = null;
         }
+    }
+
+    /**
+     * Build the body part from the provided parameters
+     *
+     * @return string
+     */
+    public function buildBody(): string
+    {
+        $body = [];
+
+        $propsArr = get_object_vars($this);
+
+        // add default params
+        foreach ($propsArr as $key => $prop) {
+            if ($key === 'filters' || $key === 'search' || $key === 'ids') continue;
+
+            // faster than is_array smh
+            if ((array)$prop === $prop) {
+                $body[$key] = implode(',', $prop);
+            } elseif ($prop !== null) {
+                $body[$key] = $prop;
+            }
+        }
+
+        empty($body['fields']) ? $body['fields'] = '*' : null;
+
+        // add search field
+        if ($this->search) {
+            $body['search'] = "\"{$this->search}\"";
+        }
+
+        $filters = [];
+
+        if (isset($propsArr['filters'])) {
+            foreach ($propsArr['filters'] as $data) {
+                $value = (int) $data['value'] === $data['value'] ? $data['value'] : "\"{$data['value']}\"";
+                $filters[] = "{$data['field']} {$data['postfix']} $value";
+            }
+
+            if (count($this->ids)) {
+                $idArray = implode(',', $this->ids);
+                $filters[] = "id = [$idArray]";
+            }
+
+            $body['where'] = implode(' & ', $filters);
+        }
+
+        $returnBody = [];
+        foreach ($body as $key => $element) {
+            $returnBody[] = $key . ' ' . $element . ';';
+        }
+
+        return implode("\n", $returnBody);
     }
 }
